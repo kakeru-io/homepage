@@ -2,32 +2,45 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: リポジトリをチェックアウト
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
-      - name: Node.js をセットアップ
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
         with:
-          node-version: 18
+          node-version: '20'
 
-      - name: Yarn をインストール
-        run: npm install -g yarn
+      - name: Install dependencies and build site
+        run: |
+          yarn install
+          yarn build
 
-      - name: 依存関係をインストール
-        run: yarn install --frozen-lockfile
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-      - name: ビルド
-        run: yarn build
-
-      - name: GitHub Pages にデプロイ
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          branch: gh-pages
-          folder: build
+          path: './build'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
